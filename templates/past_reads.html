@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Past Reads</title>
+</head>
+<body>
+    <h1>Your Past Reads</h1>
+    
+    <h2>Add or Update a Past Read</h2>
+    <form id="add-past-read-form">
+        <label for="book_title">Book Title:</label>
+        <input type="text" id="book_title" name="book_title" required><br><br>
+        
+        <label for="opinion">Opinion:</label>
+        <textarea id="opinion" name="opinion"></textarea><br><br>
+        
+        <button type="submit">Add or Update Past Read</button>
+    </form>
+    
+    <h2>Your Past Reads List</h2>
+    <ul id="books-list">
+        <!-- Dynamically updated via JavaScript -->
+    </ul>
+
+    <script>
+        // Function to fetch and display past reads
+        async function fetchPastReads() {
+            const response = await fetch('/api/past_reads');
+            const data = await response.json();
+
+            const booksList = document.getElementById('books-list');
+            booksList.innerHTML = ''; // Clear the list before updating
+            
+            data.items.forEach(read => {
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <strong>${read.book_title}</strong><br> <!-- Change book_id to book_title -->
+                    Status: ${read.status}<br>
+                    Opinion: ${read.opinion || "No opinion provided"}
+                `;
+                booksList.appendChild(li);
+            });
+        }
+
+        // Form submission handler
+        document.getElementById('add-past-read-form').addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const bookTitle = document.getElementById('book_title').value;
+            const opinion = document.getElementById('opinion').value;
+
+            const response = await fetch('/api/past_reads', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    book_title: bookTitle,
+                    opinion: opinion
+                })
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                alert(result.message);
+                fetchPastReads(); // Refresh the list
+            } else {
+                alert(result.error || "An error occurred!");
+            }
+        });
+
+        // Load past reads on page load
+        fetchPastReads();
+    </script>
+</body>
+</html>

@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book Recommendations</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        .book-card {
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin: 10px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .book-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        .book-author {
+            font-style: italic;
+        }
+        .book-description {
+            margin-top: 10px;
+            font-size: 1rem;
+            color: #555;
+        }
+        .feedback-btn {
+            margin-top: 10px;
+            margin-right: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <h1>Book Recommendations</h1>
+
+        <!-- Form for entering book query -->
+        <form method="get" action="/recommendations" id="recommendationForm">
+            <div class="form-group">
+                <label for="query">Enter a Book or Topic:</label>
+                <input type="text" class="form-control" id="query" name="query" placeholder="e.g., 'Fantasy novels' or 'Harry Potter'" value="{{ query }}">
+            </div>
+            <div class="form-group">
+                <label for="genre">Genre (Optional):</label>
+                <input type="text" class="form-control" id="genre" name="genre" placeholder="e.g., 'Fantasy'" value="{{ genre }}">
+            </div>
+            <button type="submit" class="btn btn-primary">Get Recommendations</button>
+        </form>
+
+        <!-- Display the search query if it exists -->
+        {% if query %}
+            <p><strong>Recommendations for: </strong>"{{ query }}"</p>
+        {% endif %}
+
+        <!-- Display the single recommended book -->
+        <div class="row" id="recommendationContainer">
+            {% if book %}
+                <div class="col-md-4">
+                    <div class="book-card">
+                        <h3 class="book-title">{{ book.title }}</h3>
+                        <p class="book-author">By: {{ book.author.name if book.author else "Unknown Author" }}</p>
+                        <p class="book-description">{{ book.description if book.description else "No description available." }}</p>
+
+                        <!-- Feedback buttons for the book -->
+                        <div>
+                            <button class="btn btn-success feedback-btn" onclick="sendFeedback('{{ book.id }}', 'accept')">Accept</button>
+                            <button class="btn btn-danger feedback-btn" onclick="sendFeedback('{{ book.id }}', 'reject')">Reject</button>
+                        </div>
+                    </div>
+                </div>
+            {% else %}
+                <p>No recommendations available for this query.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script>
+        function sendFeedback(bookId, feedback) {
+            const userId = "{{ user_id }}";  // Dynamically get the user_id
+
+            // Send feedback to the backend
+            $.ajax({
+                url: '/api/feedback',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ user_id: userId, book_id: bookId, feedback: feedback }),
+                success: function(response) {
+                    alert('Feedback recorded successfully!');
+
+                    // Fetch new recommendations after feedback
+                    fetchNewRecommendation();
+                },
+                error: function() {
+                    alert('Error recording feedback.');
+                }
+            });
+        }
+
+        function fetchNewRecommendation() {
+            const query = $('#query').val();
+            const genre = $('#genre').val();
+
+            // Fetch new recommendations from the backend
+            $.ajax({
+                url: '/api/recommendations',
+                type: 'GET',
+                data: { query: query, genre: genre },
+                success: function(response) {
+                    // Update the recommendation container dynamically
+                    const container = $('#recommendationContainer');
+                    container.empty(); // Clear previous content
+
+                    if (response.book) {
+                        container.append(`
+                            <div class="col-md-4">
+                                <div class="book-card">
+                                    <h3 class="book-title">${response.book.title}</h3>
+                                    <p class="book-author">By: ${response.book.author || "Unknown Author"}</p>
+                                    <p class="book-description">${response.book.description || "No description available."}</p>
+                                    <div>
+                                        <button class="btn btn-success feedback-btn" onclick="sendFeedback('${response.book.id}', 'accept')">Accept</button>
+                                        <button class="btn btn-danger feedback-btn" onclick="sendFeedback('${response.book.id}', 'reject')">Reject</button>
+                                    </div>
+                                </div>
+                            </div>
+                        `);
+                    } else {
+                        container.append('<p>No recommendations available for this query.</p>');
+                    }
+                },
+                error: function() {
+                    alert('Error fetching new recommendations.');
+                }
+            });
+        }
+    </script>
+</body>
+</html>
